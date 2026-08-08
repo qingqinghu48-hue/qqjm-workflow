@@ -44,6 +44,41 @@ function Invoke-Git {
   & $script:gitExe -c "safe.directory=$repo" @GitArgs
 }
 
+# 自动检测本机代理（系统代理 / 常见代理软件端口）
+function Test-TcpPort([int]$port, [int]$timeoutMs = 300) {
+  try {
+    $c = New-Object System.Net.Sockets.TcpClient
+    $iar = $c.BeginConnect("127.0.0.1", $port, $null, $null)
+    if (-not $iar.AsyncWaitHandle.WaitOne($timeoutMs)) { $c.Close(); return $false }
+    $c.EndConnect($iar)
+    $c.Close()
+    return $true
+  } catch { return $false }
+}
+
+$proxyUrl = $null
+try {
+  $inet = Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings" -ErrorAction SilentlyContinue
+  if ($inet.ProxyEnable -eq 1 -and $inet.ProxyServer) {
+    $ps = $inet.ProxyServer.Trim()
+    if ($ps -notmatch '^https?://') { $ps = "http://$ps" }
+    $proxyUrl = $ps
+  }
+} catch {}
+if (-not $proxyUrl) {
+  foreach ($port in @(7890, 7897, 10809, 10808, 1080, 8080, 8888, 8889, 9910)) {
+    if (Test-TcpPort $port) { $proxyUrl = "http://127.0.0.1:$port"; break }
+  }
+}
+if ($proxyUrl) {
+  $oldEA2 = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  Invoke-Git config --global http.proxy $proxyUrl 2>&1 | Out-Null
+  Invoke-Git config --global https.proxy $proxyUrl 2>&1 | Out-Null
+  $ErrorActionPreference = $oldEA2
+  Write-Host "已检测到代理：$proxyUrl" -ForegroundColor Yellow
+}
+
 Write-Host "=== 清清聊加盟 · GitHub 一键推送 ===" -ForegroundColor Cyan
 Write-Host ""
 
@@ -77,6 +112,11 @@ Invoke-Git push -u origin main 2>&1 | ForEach-Object { Write-Host $_ }
 if ($LASTEXITCODE -ne 0) {
   Write-Host "推送失败（请检查令牌是否过期或没有 repo 权限）" -ForegroundColor Red
   Write-Host "重新生成令牌：GitHub → Settings → Developer settings → Personal access tokens" -ForegroundColor Yellow
+  Write-Host ""
+  Write-Host "如果错误是“无法连接 github.com”，说明网络需要代理：" -ForegroundColor Yellow
+  Write-Host "  1. 打开你的代理软件（Clash / V2Ray 等）" -ForegroundColor Yellow
+  Write-Host "  2. 如果代理端口不是常见的 7890/7897/1080/10809，告诉我端口号" -ForegroundColor Yellow
+  Write-Host "  3. 或者手动执行：git config --global http.proxy http://127.0.0.1:<你的端口>" -ForegroundColor Yellow
   Invoke-Git remote set-url origin "https://github.com/qingqinghu48-hue/qqjm-workflow.git"
   Read-Host "按回车键关闭"
   exit 1
