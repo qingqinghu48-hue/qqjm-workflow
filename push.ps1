@@ -107,16 +107,27 @@ function Push-Once([string]$msg) {
 }
 
 if ($watch) {
-  Write-Host "[watch] 监听中：$repo （文件变化后 30 秒自动推送，Ctrl+C 退出）" -ForegroundColor Cyan
-  $lastPush = Get-Date
+  Write-Host "[watch] 监听中：$repo （文件变化后自动推送，Ctrl+C 退出）" -ForegroundColor Cyan
+  $script:lastPush = Get-Date
+  $script:dirty = $false
   $fsw = New-Object System.IO.FileSystemWatcher $repo
   $fsw.IncludeSubdirectories = $true
+  $fsw.NotifyFilter = [System.IO.NotifyFilters]::LastWrite -bor [System.IO.NotifyFilters]::FileName -bor [System.IO.NotifyFilters]::Size
+  $action = {
+    if ($_.FullPath -match '\.git\\|push_log\.txt') { return }
+    $script:dirty = $true
+  }
+  $fsw.add_Changed($action)
+  $fsw.add_Created($action)
+  $fsw.add_Deleted($action)
+  $fsw.add_Renamed($action)
   $fsw.EnableRaisingEvents = $true
   while ($true) {
-    Wait-Event -Timeout 1 | Out-Null
-    if ((Get-Date) - $lastPush -gt (New-TimeSpan -Seconds 30)) {
+    Start-Sleep -Seconds 3
+    if ($script:dirty -and ((Get-Date) - $script:lastPush).TotalSeconds -ge 10) {
+      $script:dirty = $false
       try { Push-Once } catch { Write-Host "[watch] 推送失败：$_" -ForegroundColor Yellow }
-      $lastPush = Get-Date
+      $script:lastPush = Get-Date
     }
   }
 } else {

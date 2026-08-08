@@ -212,6 +212,15 @@
   <div class="section-title">五、每日运行时间线（按当前配置）</div>
   <div class="card" id="timelineCard"></div>
 
+  <div class="section-title">六、服务器运行状态</div>
+  <div class="card" id="runCard">
+    <div class="summary" id="runSummary">正在连接服务器…</div>
+    <div class="card-foot" style="gap:10px">
+      <button class="btn primary" onclick="runNow()">⚡ 立即出图</button>
+    </div>
+    <div id="runOutputs" style="margin-top:12px"></div>
+  </div>
+
   <footer>
     配置自动保存在本机浏览器（localStorage）· 可随时导出/导入 JSON 备份<br>
     当前栏目：清清聊加盟 · 出稿时间 10:00
@@ -617,6 +626,45 @@ function resetConfig() {
 
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
 render();
+
+/* ---------- 服务器运行状态 ---------- */
+async function loadRunStatus() {
+  const sum = document.getElementById("runSummary");
+  const out = document.getElementById("runOutputs");
+  try {
+    const res = await fetch("/api/status", { cache: "no-store" });
+    if (!res.ok) throw new Error("bad");
+    const st = await res.json();
+    const running = st.running
+      ? "🔄 正在出图中…"
+      : (st.lastRun && st.lastRun.at ? "✅ 上次运行完成" : "⏳ 等待定时触发（每天 " + config.schedule.deliverTime + "）");
+    sum.innerHTML = `服务器时间 <b>${st.now}</b> · 今日 <b>${st.today}</b> · ${running}`;
+    if (st.outputs && st.outputs.length) {
+      out.innerHTML = '<b style="font-size:12.5px;color:var(--sub)">最近产出：</b>' +
+        st.outputs.slice(0, 5).map(o =>
+          `<div style="font-size:13px;margin-top:6px">📅 ${o.date} → ${o.files.join("、")}</div>`
+        ).join("");
+    } else {
+      out.innerHTML = '<div style="font-size:13px;color:var(--sub);margin-top:6px">还没有产出，点上面的"立即出图"生成今天的</div>';
+    }
+  } catch (e) {
+    sum.innerHTML = "当前为本地预览模式。部署到服务器后，这里会显示运行状态和产物列表。";
+    out.innerHTML = "";
+  }
+}
+
+async function runNow() {
+  try {
+    const res = await fetch("/api/run", { method: "POST" });
+    if (!res.ok) throw new Error("bad");
+    alert("已触发出图，正在生成今天的海报…约 10 秒后刷新页面查看结果");
+    setTimeout(loadRunStatus, 5000);
+  } catch (e) {
+    alert("当前是本地预览模式，无法触发。请在部署后的服务器网站上操作。");
+  }
+}
+
+loadRunStatus();
 </script>
 </body>
 </html>
