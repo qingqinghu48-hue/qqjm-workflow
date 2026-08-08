@@ -90,8 +90,18 @@ function Push-Once([string]$msg) {
     return
   }
   if (-not $msg) { $msg = "update $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" }
-  Invoke-Git commit -m $msg 2>&1 | ForEach-Object { Write-Host $_ }
-  Invoke-Git push 2>&1 | ForEach-Object { Write-Host $_ }
+  $oldEA3 = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  $co = Invoke-Git commit -m $msg 2>&1
+  $po = Invoke-Git push 2>&1
+  $ErrorActionPreference = $oldEA3
+  foreach ($line in @($co) + @($po)) {
+    if ($line -is [System.Management.Automation.ErrorRecord]) {
+      Write-Host $line.ToString() -ForegroundColor DarkGray
+    } else {
+      Write-Host $line
+    }
+  }
   if ($LASTEXITCODE -ne 0) { Write-Host "[push] 推送失败，请先运行 setup-and-push.ps1 检查令牌" -ForegroundColor Red; exit 1 }
   Write-Host "[push] 已推送：$msg" -ForegroundColor Green
 }
