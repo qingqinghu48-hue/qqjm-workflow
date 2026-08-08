@@ -66,7 +66,7 @@ try {
   }
 } catch {}
 if (-not $proxyUrl) {
-  foreach ($port in @(7890, 7897, 10809, 10808, 1080, 8080, 8888, 8889, 9910)) {
+  foreach ($port in @(7078, 7890, 7897, 10809, 10808, 1080, 8080, 8888, 8889, 9910)) {
     if (Test-TcpPort $port) { $proxyUrl = "http://127.0.0.1:$port"; break }
   }
 }

@@ -47,6 +47,40 @@ function Invoke-Git {
   & $script:gitExe -c "safe.directory=$repo" @GitArgs
 }
 
+function Test-TcpPort([int]$port, [int]$timeoutMs = 300) {
+  try {
+    $c = New-Object System.Net.Sockets.TcpClient
+    $iar = $c.BeginConnect("127.0.0.1", $port, $null, $null)
+    if (-not $iar.AsyncWaitHandle.WaitOne($timeoutMs)) { $c.Close(); return $false }
+    $c.EndConnect($iar)
+    $c.Close()
+    return $true
+  } catch { return $false }
+}
+
+$proxyUrl = $null
+try {
+  $inet = Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings" -ErrorAction SilentlyContinue
+  if ($inet.ProxyEnable -eq 1 -and $inet.ProxyServer) {
+    $ps = $inet.ProxyServer.Trim()
+    if ($ps -notmatch '^https?://') { $ps = "http://$ps" }
+    $proxyUrl = $ps
+  }
+} catch {}
+if (-not $proxyUrl) {
+  foreach ($port in @(7078, 7890, 7897, 10809, 10808, 1080, 8080, 8888, 8889, 9910)) {
+    if (Test-TcpPort $port) { $proxyUrl = "http://127.0.0.1:$port"; break }
+  }
+}
+if ($proxyUrl) {
+  $oldEA2 = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  Invoke-Git config --global http.proxy $proxyUrl 2>&1 | Out-Null
+  Invoke-Git config --global https.proxy $proxyUrl 2>&1 | Out-Null
+  $ErrorActionPreference = $oldEA2
+  Write-Host "已检测到代理：$proxyUrl" -ForegroundColor Yellow
+}
+
 function Push-Once([string]$msg) {
   Set-Location $repo
   Invoke-Git add -A
