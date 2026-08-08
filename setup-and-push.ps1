@@ -108,7 +108,17 @@ if ($diff) {
   Invoke-Git commit -m "init: 工作流部署 $(Get-Date -Format 'yyyy-MM-dd HH:mm')" 2>&1 | ForEach-Object { Write-Host $_ }
   if ($LASTEXITCODE -ne 0) { throw "git commit 失败" }
 }
-Invoke-Git push -u origin main 2>&1 | ForEach-Object { Write-Host $_ }
+$oldEA3 = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+$pushOut = Invoke-Git push -u origin main 2>&1
+$ErrorActionPreference = $oldEA3
+foreach ($line in $pushOut) {
+  if ($line -is [System.Management.Automation.ErrorRecord]) {
+    Write-Host $line.ToString() -ForegroundColor DarkGray
+  } else {
+    Write-Host $line
+  }
+}
 if ($LASTEXITCODE -ne 0) {
   Write-Host "推送失败（请检查令牌是否过期或没有 repo 权限）" -ForegroundColor Red
   Write-Host "重新生成令牌：GitHub → Settings → Developer settings → Personal access tokens" -ForegroundColor Yellow
