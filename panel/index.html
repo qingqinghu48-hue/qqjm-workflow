@@ -690,10 +690,13 @@ async function loadRunStatus() {
       stepsEl.innerHTML = '<div style="font-size:13px;color:var(--sub)">还没有运行记录，点"开始今日工作流"跑一次。</div>';
     }
     if (st.outputs && st.outputs.length) {
-      out.innerHTML = '<b style="font-size:12.5px;color:var(--sub)">最近产出：</b>' +
-        st.outputs.slice(0, 5).map(o =>
-          `<div style="font-size:13px;margin-top:6px">📅 ${o.date} → ${o.files.join("、")}</div>`
-        ).join("");
+      out.innerHTML = '<b style="font-size:12.5px;color:var(--sub)">最近产出（点击下载）：</b>' +
+        st.outputs.slice(0, 3).map(o => {
+          const files = o.files.filter(f => !f.startsWith("steps") && !["progress.json", "manifest.json"].includes(f));
+          return `<div style="font-size:13px;margin-top:8px">📅 ${o.date}<br>` +
+            files.map(f => `&nbsp;&nbsp;📦 <a href="/outputs/${o.date}/${encodeURIComponent(f)}" download>${esc(f)}</a>`).join("<br>") +
+            "</div>";
+        }).join("");
     }
   } catch (e) {
     sum.innerHTML = "当前为本地预览模式。部署到服务器后，这里会显示运行控制台。";
@@ -744,8 +747,8 @@ function renderStepDetail(id, prog, out) {
     if (png) lines.push(`<img src="/outputs/${prog.date}/${png}" style="width:220px;border-radius:10px;margin-top:8px" alt="封面预览">`);
     lines.push(`<div class="wditem" style="font-size:12.5px;color:var(--sub)">模板：${esc(out.template)} · ${out.width}×${out.height}</div>`);
   } else if (id === "deliver") {
-    lines.push("<div class='wdetail-h'>交付清单</div>");
-    out.files.forEach((f) => lines.push(`<div class="wditem">📦 ${esc(f)}</div>`));
+    lines.push("<div class='wdetail-h'>交付清单（点击下载）</div>");
+    out.files.forEach((f) => lines.push(`<div class="wditem">📦 <a href="/outputs/${prog.date}/${encodeURIComponent(f)}" download>${esc(f)}</a></div>`));
     lines.push(`<div class="wditem" style="font-size:12.5px;color:var(--sub)">${esc(out.note)}</div>`);
   }
   lines.push(`<pre class="wjson">${esc(JSON.stringify(out, null, 2))}</pre>`);
