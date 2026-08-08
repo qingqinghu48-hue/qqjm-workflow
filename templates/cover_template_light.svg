@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1440" viewBox="0 0 1080 1440">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F7F3EC"/>
+      <stop offset="1" stop-color="#EDE4D6"/>
+    </linearGradient>
+    <linearGradient id="visual" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#E06A3C" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#2E6F9E" stop-opacity="0.9"/>
+    </linearGradient>
+    <pattern id="grid" width="64" height="64" patternUnits="userSpaceOnUse">
+      <path d="M 64 0 L 0 0 0 64" fill="none" stroke="rgba(28,42,58,0.04)" stroke-width="1"/>
+    </pattern>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000000" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+
+  <rect width="1080" height="1440" fill="url(#bg)"/>
+  <rect width="1080" height="1440" fill="url(#grid)"/>
+
+  <!-- 装饰：右上圆环 -->
+  <g fill="none" stroke="rgba(28,42,58,0.06)" stroke-width="2">
+    <circle cx="1020" cy="60" r="320"/>
+    <circle cx="1020" cy="60" r="250"/>
+  </g>
+  <g fill="#E06A3C" opacity="0.5">
+    <circle cx="1000" cy="300" r="7"/>
+    <circle cx="940" cy="120" r="4"/>
+  </g>
+
+  <!-- 品牌栏 -->
+  <rect x="80" y="84" width="258" height="62" rx="31" fill="#1C2A3A"/>
+  <text x="90" y="125" font-family="Microsoft YaHei, 'PingFang SC', 'Noto Sans SC', sans-serif" font-size="34" font-weight="700" fill="#FFFFFF">清清聊加盟</text>
+  <text x="1000" y="125" text-anchor="end" font-family="Microsoft YaHei, 'PingFang SC', 'Noto Sans SC', sans-serif" font-size="27" fill="#6E7B8A">2026.08.08 · 第01期</text>
+
+  <!-- 主标题 -->
+  <text x="80" y="262" font-family="Microsoft YaHei, 'PingFang SC', 'Noto Sans SC', sans-serif" font-size="82" font-weight="700" fill="#1C2A3A">加盟圈今日大事件</text>
+  <text x="80" y="362" font-family="Microsoft YaHei, 'PingFang SC', 'Noto Sans SC', sans-serif" font-size="82" font-weight="700" fill="#E06A3C">这 3 条值得关注</text>
+  <text x="80" y="438" font-family="Microsoft YaHei, 'PingFang SC', 'Noto Sans SC', sans-serif" font-size="38" fill="#6E7B8A">每天 10:00 · 聊聊加盟圈那点事</text>
+
+  <!-- 主视觉区 -->
+  <g filter="url(#shadow)">
+    <rect x="80" y="486" width="920" height="340" rx="28" fill="url(#visual)"/>
+  </g>
+  <g opacity="0.16">
+    <circle cx="880" cy="520" r="150" fill="#1C2A3A"/>
+    <circle cx="180" cy="760" r="110" fill="#FFFFFF"/>
+  </g>
+  <g transform="translate(484 560)">
+    <rect x="-52" y="-52" width="104" height="104" rx="22" fill="#FFFFFF" opacity="0.92"/>
+    <circle cx="0" cy="-14" r="26" fill="none" stroke="#2E6F9E" stroke-width="7"/>
+    <rect x="-24" y="22" width="16" height="16" rx="4" fill="#2E6F9E"/>
+    <rect x="2" y="22" width="16" height="16" rx="4" fill="#2E6F9E"/>
+    <rect x="28" y="22" width="16" height="16" rx="4" fill="#2E6F9E"/>
+  </g>
+  <text x="540" y="774" text-anchor="middle" font-family="Microsoft YaHei, 'PingFang SC', 'Noto Sans SC', sans-serif" font-size="30" fill="#FFFFFF" opacity="0.95">主视觉位 · 每日替换为当日选题配图</text>
+
+  
+    <g>
+      <rect x="80" y="896" width="920" height="112" rx="22" fill="#FFFFFF" stroke="rgba(28,42,58,0.10)" stroke-width="1.5"/>
+      <circle cx="130" cy="952" r="24" fill="#E06A3C"/>
+      <text x="130" y="964" text-anchor="middle" font-family="Microsoft YaHei, 'PingFang SC', 'Noto Sans SC', sans-serif" font-size="26" font-weight="700" fill="#FFFFFF">1</text>
+      <text x="182" y="936" font-family="Microsoft YaHei, 'PingFang SC', 'Noto Sans SC', sans-serif" font-size="32" font-weight="700" fill="#1C2A3A">今日重磅</text>
+      <text x="182" y="976" font-family="Microsoft YaHei, 'PingFang SC', 'Noto Sans SC', sans-serif" font-size="27" fill="#6E7B8A">某头部品牌宣布开放全国加盟</text>
+    </g>
+    <g>
+      <rect x="80" y="1028" width="920" height="112" rx="22" fill="#FFFFFF" stroke="rgba(28,42,58,0.10)" stroke-width="1.5"/>
+      <circle cx="130" cy="1084" r="24" fill="#E06A3C"/>
+      <text x="130" y="1096" text-anchor="middle" font-family="Microsoft YaHei, 'PingFang SC', 'Noto Sans SC', sans-serif" font-size="26" font-weight="700" fill="#FFFFFF">2</text>
+      <text x="182" y="1068" font-family="Microsoft YaHei, 'PingFang SC', 'Noto Sans SC', sans-serif" font-size="32" font-weight="700" fill="#1C2A3A">行业动态</text>
+      <text x="182" y="1108" font-family="Microsoft YaHei, 'PingFang SC', 'Noto Sans SC', sans-serif" font-size="27" fill="#6E7B8A">加盟新规落地，合同条款有变化</text>
+    </g>
+    <g>
+      <rect x="80" y="1160" width="920" height="112" rx="22" fill="#FFFFFF" stroke="rgba(28,42,58,0.10)" stroke-width="1.5"/>
+      <circle cx="130" cy="1216" r="24" fill="#E06A3C"/>
+      <text x="130" y="1228" text-anchor="middle" font-family="Microsoft YaHei, 'PingFang SC', 'Noto Sans SC', sans-serif" font-size="26" font-weight="700" fill="#FFFFFF">3</text>
+      <text x="182" y="1200" font-family="Microsoft YaHei, 'PingFang SC', 'Noto Sans SC', sans-serif" font-size="32" font-weight="700" fill="#1C2A3A">避坑提醒</text>
+      <text x="182" y="1240" font-family="Microsoft YaHei, 'PingFang SC', 'Noto Sans SC', sans-serif" font-size="27" fill="#6E7B8A">这 3 类加盟项目最近别碰</text>
+    </g>
+
+  <!-- 底部标签 -->
+  <line x1="80" y1="1336" x2="1000" y2="1336" stroke="rgba(28,42,58,0.10)" stroke-width="1.5"/>
+  <text x="80" y="1386" font-family="Microsoft YaHei, 'PingFang SC', 'Noto Sans SC', sans-serif" font-size="32" font-weight="700" fill="#E06A3C">#加盟 #连锁加盟 #创业日记</text>
+</svg>

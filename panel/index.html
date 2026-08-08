@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>清清聊加盟 · 工作流控制台</title>
+<style>
+  :root {
+    --bg: #0e141c;
+    --bg2: #121a24;
+    --panel: #182230;
+    --panel2: #1e2a3a;
+    --border: #263548;
+    --ink: #eef3f8;
+    --sub: #8fa2b5;
+    --accent: #ff8c42;
+    --accent2: #4fc3f7;
+    --ok: #34c77b;
+    --warn: #f5b041;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: radial-gradient(1200px 600px at 80% -10%, #1a2a3c 0%, var(--bg) 55%);
+    color: var(--ink);
+    font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+  a { color: var(--accent2); text-decoration: none; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 36px; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: rgba(14,20,28,0.92); backdrop-filter: blur(10px); z-index: 20;
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .logo {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 20px; color: #0e141c;
+  }
+  .brand h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.5px; }
+  .brand small { display: block; color: var(--sub); font-size: 12px; margin-top: 2px; }
+  .head-actions { display: flex; gap: 10px; align-items: center; }
+  .badge {
+    font-size: 12px; padding: 5px 12px; border-radius: 999px;
+    border: 1px solid var(--border); color: var(--sub);
+  }
+  .badge.ok { color: var(--ok); border-color: rgba(52,199,123,0.4); background: rgba(52,199,123,0.08); }
+
+  .btn {
+    background: var(--panel2); color: var(--ink);
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 8px 16px; font-size: 13px; cursor: pointer;
+    transition: all 0.15s; font-family: inherit;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #0e141c; font-weight: 700; }
+  .btn.primary:hover { filter: brightness(1.1); color: #0e141c; }
+
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 26px 36px 0; }
+  .section-title { font-size: 15px; font-weight: 700; color: var(--sub); margin: 26px 0 14px; letter-spacing: 1px; }
+
+  /* 节点流 */
+  .flow {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px;
+  }
+  .flow-node {
+    flex: 1; min-width: 140px; padding: 14px 12px; border-radius: 12px;
+    background: var(--panel2); border: 1px solid var(--border);
+    cursor: pointer; transition: all 0.15s; position: relative;
+  }
+  .flow-node:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .flow-node .ic { font-size: 22px; }
+  .flow-node .nm { font-size: 13px; font-weight: 700; margin-top: 8px; }
+  .flow-node .st { font-size: 11px; color: var(--sub); margin-top: 4px; }
+  .flow-node .st.ready { color: var(--ok); }
+  .flow-node::after {
+    content: "→"; position: absolute; right: -12px; top: 50%; transform: translateY(-50%);
+    color: var(--border); font-size: 14px; z-index: 2;
+  }
+  .flow-node:last-child::after { display: none; }
+
+  /* 配置卡片 */
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px 22px;
+  }
+  .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .card-head .t { display: flex; align-items: center; gap: 10px; }
+  .card-head .t .ic { font-size: 20px; }
+  .card-head .t h3 { font-size: 16px; }
+  .card-head .t p { font-size: 12px; color: var(--sub); margin-top: 3px; }
+  .summary {
+    font-size: 12.5px; color: var(--sub); line-height: 1.9;
+    background: var(--bg2); border: 1px dashed var(--border); border-radius: 10px;
+    padding: 10px 14px; min-height: 48px;
+  }
+  .summary b { color: var(--accent2); font-weight: 600; }
+  .card-foot { margin-top: 14px; display: flex; justify-content: flex-end; }
+
+  /* 全局区 */
+  .preview-row { display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
+  @media (max-width: 900px) { .preview-row { grid-template-columns: 1fr; } }
+  .preview-box { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+  .preview-box img { width: 100%; border-radius: 10px; display: block; }
+  .preview-box .cap { font-size: 12px; color: var(--sub); margin-top: 10px; text-align: center; }
+
+  /* 弹层 */
+  .modal-mask {
+    display: none; position: fixed; inset: 0; z-index: 100;
+    background: rgba(5,10,16,0.7); backdrop-filter: blur(4px);
+    align-items: flex-start; justify-content: center; overflow-y: auto; padding: 40px 20px;
+  }
+  .modal-mask.open { display: flex; }
+  .modal {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 18px;
+    width: 640px; max-width: 100%; padding: 26px 30px; box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  }
+  .modal h2 { font-size: 19px; margin-bottom: 4px; }
+  .modal .sub { font-size: 13px; color: var(--sub); margin-bottom: 20px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .field .hint { font-size: 11.5px; color: var(--sub); margin-top: 5px; line-height: 1.6; }
+  .field input[type="text"], .field input[type="number"], .field input[type="time"],
+  .field select, .field textarea {
+    width: 100%; background: var(--panel); color: var(--ink);
+    border: 1px solid var(--border); border-radius: 9px;
+    padding: 9px 12px; font-size: 13.5px; font-family: inherit; outline: none;
+  }
+  .field textarea { min-height: 92px; resize: vertical; line-height: 1.7; }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+  .field .row { display: flex; gap: 14px; }
+  .field .row > div { flex: 1; }
+  .toggle {
+    display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;
+    font-size: 13.5px;
+  }
+  .toggle input { display: none; }
+  .switch { width: 42px; height: 24px; border-radius: 999px; background: var(--border); position: relative; transition: background 0.2s; flex: none; }
+  .switch::after {
+    content: ""; position: absolute; width: 18px; height: 18px; border-radius: 50%;
+    background: #fff; top: 3px; left: 3px; transition: left 0.2s;
+  }
+  .toggle input:checked + .switch { background: var(--accent); }
+  .toggle input:checked + .switch::after { left: 21px; }
+  .modal-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+
+  .toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--panel2); border: 1px solid var(--border); color: var(--ink);
+    padding: 11px 22px; border-radius: 999px; font-size: 13px; opacity: 0; transition: all 0.25s;
+    z-index: 200; box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  footer { color: var(--sub); font-size: 12px; text-align: center; margin-top: 40px; line-height: 1.8; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="logo">清</div>
+    <div>
+      <h1>清清聊加盟 · 工作流控制台</h1>
+      <small>每日加盟圈情报 → 小红书图文笔记 · 全流程可视化配置</small>
+    </div>
+  </div>
+  <div class="head-actions">
+    <span class="badge" id="saveBadge">配置未修改</span>
+    <button class="btn" onclick="exportConfig()">导出配置</button>
+    <button class="btn" onclick="document.getElementById('importFile').click()">导入配置</button>
+    <button class="btn" onclick="resetConfig()">恢复默认</button>
+    <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importConfig(event)">
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="section-title">一、流程总览 · 点击节点跳转到对应配置</div>
+  <div class="flow" id="flowBar"></div>
+
+  <div class="section-title">二、环节配置 · 每个环节都可以修改</div>
+  <div class="grid" id="stageGrid"></div>
+
+  <div class="section-title">三、品牌与全局设置</div>
+  <div class="card" style="margin-bottom: 16px" id="globalCard"></div>
+
+  <div class="section-title">四、模板预览</div>
+  <div class="preview-row">
+    <div class="preview-box">
+      <img id="coverPreview" alt="封面模板预览">
+      <div class="cap" id="previewCap"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="t"><h3>关于模板</h3></div></div>
+      <div class="summary" style="line-height: 1.9">
+        模板源文件为 <b>SVG 矢量格式</b>（可在 Illustrator / Photoshop 中直接打开继续编辑），
+        每天由工作流自动套用当日选题与文案，渲染输出 <b>1080×1440</b> 的 PNG。<br>
+        输出目录：<b>outputs/YYYY-MM-DD/</b>（图组 + 文案文件）。<br>
+        如需调整版式：在“出图”环节修改模板文件路径，或直接编辑 SVG 后重新渲染。
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">五、每日运行时间线（按当前配置）</div>
+  <div class="card" id="timelineCard"></div>
+
+  <footer>
+    配置自动保存在本机浏览器（localStorage）· 可随时导出/导入 JSON 备份<br>
+    当前栏目：清清聊加盟 · 出稿时间 10:00
+  </footer>
+</div>
+
+<div class="modal-mask" id="modal">
+  <div class="modal">
+    <h2 id="modalTitle"></h2>
+    <div class="sub" id="modalSub"></div>
+    <form id="modalForm"></form>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="saveModal()">保存修改</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const LS_KEY = "qqjm_workflow_v1";
+const BRAND = { name: "清清聊加盟", slogan: "每天 10:00 · 聊聊加盟圈那点事" };
+
+const DEFAULT_CONFIG = {
+  brand: {
+    accountName: "清清聊加盟",
+    slogan: "每天 10:00 · 聊聊加盟圈那点事",
+    theme: "dark",
+    primaryColor: "#ff8c42",
+    logoFile: ""
+  },
+  schedule: {
+    collectTime: "09:00",
+    deliverTime: "10:00",
+    timezone: "Asia/Shanghai"
+  },
+  stages: {
+    collect: {
+      enabled: true,
+      keywords: "加盟\n连锁加盟\n招商加盟\n餐饮加盟\n零售加盟\n教育加盟\n美业加盟\n加盟政策\n加盟骗局\n开放加盟",
+      sources: "红餐网\n联商网\n赢商网\n百度资讯\n微博热搜",
+      minItems: 10,
+      maxItems: 30
+    },
+    select: {
+      enabled: true,
+      mainTopics: 1,
+      backupTopics: 2,
+      heatWeight: 40,
+      noveltyWeight: 30,
+      valueWeight: 30,
+      excludeWords: "纯招商会广告\n无信息量软文"
+    },
+    create: {
+      enabled: true,
+      titleStyle: "hook",
+      bodyLength: 300,
+      useEmoji: true,
+      tags: "#加盟\n#连锁加盟\n#创业日记"
+    },
+    design: {
+      enabled: true,
+      width: 1080,
+      height: 1440,
+      template: "cover_template_dark.svg",
+      visualMode: "ai",
+      autoPages: true,
+      maxPages: 9
+    },
+    deliver: {
+      enabled: true,
+      outputPath: "outputs/YYYY-MM-DD/",
+      exportSvg: true,
+      exportPng: true,
+      exportMarkdown: true
+    },
+    review: {
+      enabled: true,
+      period: "weekly",
+      metrics: "浏览\n点赞\n收藏\n评论",
+      autoReport: true
+    }
+  }
+};
+
+const STAGES = [
+  { id: "collect", ic: "🔍", name: "采集", desc: "全网抓取加盟圈动态",
+    summary: c => `${c.enabled ? "✅" : "⛔"} ${c.keywords.split("\n").filter(Boolean).length} 个关键词 · ${c.sources.split("\n").filter(Boolean).length} 个信息源 · ${c.minItems}~${c.maxItems} 条/天` },
+  { id: "select", ic: "🎯", name: "选题", desc: "筛出每日 1 个主选题",
+    summary: c => `${c.enabled ? "✅" : "⛔"} 主选 ${c.mainTopics} 个 + 备选 ${c.backupTopics} 个 · 热度${c.heatWeight} / 新颖${c.noveltyWeight} / 价值${c.valueWeight}` },
+  { id: "create", ic: "✍️", name: "创作", desc: "标题 + 正文 + 图文案",
+    summary: c => `${c.enabled ? "✅" : "⛔"} ${c.titleStyle === "hook" ? "钩子式标题" : c.titleStyle === "info" ? "资讯式标题" : "提问式标题"} · 约${c.bodyLength}字 · ${c.useEmoji ? "带emoji" : "不带emoji"}` },
+  { id: "design", ic: "🎨", name: "出图", desc: "SVG 模板渲染 3:4 图组",
+    summary: c => `${c.enabled ? "✅" : "⛔"} ${c.width}×${c.height} · ${c.template} · ${c.visualMode === "ai" ? "AI配图" : c.visualMode === "text" ? "纯文字" : "手动上传"} · 最多${c.maxPages}张` },
+  { id: "deliver", ic: "📦", name: "交付", desc: "输出图组 + 文案文件",
+    summary: c => `${c.enabled ? "✅" : "⛔"} ${c.outputPath} · ${c.exportPng ? "PNG" : ""}${c.exportSvg ? "+SVG" : ""}${c.exportMarkdown ? "+文案" : ""}` },
+  { id: "review", ic: "📊", name: "复盘", desc: "每周看数据调方向",
+    summary: c => `${c.enabled ? "✅" : "⛔"} ${c.period === "weekly" ? "每周" : "每月"}复盘 · ${c.metrics.split("\n").filter(Boolean).length} 项指标 · ${c.autoReport ? "自动周报" : "手动周报"}` }
+];
+
+let config = loadConfig();
+let editing = null;
+
+function loadConfig() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) return deepMerge(structuredClone(DEFAULT_CONFIG), JSON.parse(raw));
+  } catch (e) { console.warn("load config failed", e); }
+  return structuredClone(DEFAULT_CONFIG);
+}
+
+function deepMerge(base, extra) {
+  if (Array.isArray(base)) return extra;
+  if (typeof base === "object" && base !== null) {
+    const out = { ...base };
+    for (const k of Object.keys(extra || {})) {
+      out[k] = (typeof base[k] === "object" && base[k] !== null && !Array.isArray(base[k]))
+        ? deepMerge(base[k], extra[k]) : extra[k];
+    }
+    return out;
+  }
+  return extra;
+}
+
+function saveConfig() {
+  localStorage.setItem(LS_KEY, JSON.stringify(config));
+  showToast("配置已保存到本机");
+  render();
+}
+
+function markChanged() {
+  document.getElementById("saveBadge").textContent = "有未保存修改";
+  document.getElementById("saveBadge").className = "badge";
+}
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove("show"), 1800);
+}
+
+/* ---------- 渲染 ---------- */
+function render() {
+  renderFlow();
+  renderStages();
+  renderGlobal();
+  renderTimeline();
+  renderPreview();
+  const badge = document.getElementById("saveBadge");
+  badge.textContent = "配置已保存";
+  badge.className = "badge ok";
+}
+
+function renderFlow() {
+  const bar = document.getElementById("flowBar");
+  bar.innerHTML = STAGES.map(s => `
+    <div class="flow-node" onclick="scrollToStage('${s.id}')">
+      <div class="ic">${s.ic}</div>
+      <div class="nm">${s.name}</div>
+      <div class="st ${config.stages[s.id].enabled ? "ready" : ""}">${config.stages[s.id].enabled ? "已启用" : "已停用"}</div>
+    </div>`).join("");
+}
+
+function renderStages() {
+  const grid = document.getElementById("stageGrid");
+  grid.innerHTML = STAGES.map(s => {
+    const c = config.stages[s.id];
+    return `
+      <div class="card" id="stage-${s.id}">
+        <div class="card-head">
+          <div class="t"><span class="ic">${s.ic}</span><div><h3>${s.name}</h3><p>${s.desc}</p></div></div>
+          <span class="badge ${c.enabled ? "ok" : ""}">${c.enabled ? "启用" : "停用"}</span>
+        </div>
+        <div class="summary">${s.summary(c)}</div>
+        <div class="card-foot"><button class="btn primary" onclick="openModal('${s.id}')">编辑环节</button></div>
+      </div>`;
+  }).join("");
+}
+
+function renderGlobal() {
+  const b = config.brand;
+  document.getElementById("globalCard").innerHTML = `
+    <div class="card-head"><div class="t"><span class="ic">🏷️</span><div><h3>品牌与全局</h3><p>账号信息、配色、运行时间</p></div></div></div>
+    <div class="summary">
+      账号名：<b>${b.accountName}</b> · 口号：${b.slogan}<br>
+      模板配色：<b>${b.theme === "dark" ? "深蓝商务版" : "米白清新版"}</b> · 主色 <span style="color:${b.primaryColor}">●</span> ${b.primaryColor}
+      · 每日 <b>${config.schedule.collectTime}</b> 采集 / <b>${config.schedule.deliverTime}</b> 出稿
+    </div>
+    <div class="card-foot"><button class="btn primary" onclick="openModal('__global__')">编辑全局设置</button></div>`;
+}
+
+function renderTimeline() {
+  const s = config.schedule;
+  const card = document.getElementById("timelineCard");
+  card.innerHTML = `
+    <div class="summary" style="line-height: 2.2">
+      <b>${s.collectTime}</b> 采集 → 筛选（自动） → 创作（自动） → 出图（自动） → <b style="color:var(--accent)">${s.deliverTime}</b> 交付
+      <br>说明：采集后各环节按流水线自动执行，无需值守；出稿时间点交付全部产物（图片组 + 文案文件）。
+    </div>`;
+}
+
+function renderPreview() {
+  const img = document.getElementById("coverPreview");
+  const theme = config.brand.theme;
+  img.src = `../templates/cover_template_${theme}.png`;
+  document.getElementById("previewCap").textContent =
+    `封面模板预览（${theme === "dark" ? "深蓝商务版" : "米白清新版"}）· 1080×1440`;
+}
+
+function scrollToStage(id) {
+  const el = document.getElementById("stage-" + id);
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+/* ---------- 编辑弹层 ---------- */
+function openModal(id) {
+  editing = id;
+  if (id === "__global__") {
+    document.getElementById("modalTitle").textContent = "品牌与全局设置";
+    document.getElementById("modalSub").textContent = "账号信息、模板配色、每日运行时间";
+    document.getElementById("modalForm").innerHTML = `
+      <div class="field"><label>账号名</label><input type="text" id="f_accountName" value="${esc(config.brand.accountName)}"></div>
+      <div class="field"><label>账号口号</label><input type="text" id="f_slogan" value="${esc(config.brand.slogan)}"></div>
+      <div class="field"><label>模板配色</label>
+        <select id="f_theme">
+          <option value="dark" ${config.brand.theme === "dark" ? "selected" : ""}>深蓝商务版</option>
+          <option value="light" ${config.brand.theme === "light" ? "selected" : ""}>米白清新版</option>
+        </select>
+        <div class="hint">决定封面模板的默认配色；正式出图时可按单期内容临时切换。</div>
+      </div>
+      <div class="field"><label>主色（十六进制）</label><input type="text" id="f_primaryColor" value="${esc(config.brand.primaryColor)}"></div>
+      <div class="field"><label>logo 文件路径（可留空）</label><input type="text" id="f_logoFile" value="${esc(config.brand.logoFile)}" placeholder="如 D:/brand/logo.png，留空则使用文字标识"></div>
+      <div class="field"><div class="row">
+        <div><label>每日采集时间</label><input type="time" id="f_collectTime" value="${config.schedule.collectTime}"></div>
+        <div><label>每日出稿时间</label><input type="time" id="f_deliverTime" value="${config.schedule.deliverTime}"></div>
+      </div></div>`;
+  } else {
+    const s = STAGES.find(x => x.id === id);
+    document.getElementById("modalTitle").textContent = `${s.ic} ${s.name}环节`;
+    document.getElementById("modalSub").textContent = s.desc + " · 修改后立即生效，无需重启";
+    document.getElementById("modalForm").innerHTML = buildStageForm(id, config.stages[id]);
+  }
+  document.getElementById("modal").classList.add("open");
+}
+
+function closeModal() {
+  document.getElementById("modal").classList.remove("open");
+  editing = null;
+}
+
+function buildStageForm(id, c) {
+  const f = v => `<div class="field"><label>启用此环节</label><label class="toggle"><input type="checkbox" id="f_enabled" ${c.enabled ? "checked" : ""}><span class="switch"></span>${c.enabled ? "启用中" : "已停用"}</label></div>`;
+  switch (id) {
+    case "collect": return f() + `
+      <div class="field"><label>关键词（每行一个）</label><textarea id="f_keywords">${esc(c.keywords)}</textarea>
+        <div class="hint">搜索“加盟圈动态”时使用的关键词，可随时增删。</div></div>
+      <div class="field"><label>信息源（每行一个）</label><textarea id="f_sources">${esc(c.sources)}</textarea></div>
+      <div class="field"><div class="row">
+        <div><label>每日最少条数</label><input type="number" id="f_minItems" value="${c.minItems}" min="1"></div>
+        <div><label>每日最多条数</label><input type="number" id="f_maxItems" value="${c.maxItems}" min="1"></div>
+      </div></div>`;
+    case "select": return f() + `
+      <div class="field"><div class="row">
+        <div><label>主选题个数</label><input type="number" id="f_mainTopics" value="${c.mainTopics}" min="1"></div>
+        <div><label>备选题个数</label><input type="number" id="f_backupTopics" value="${c.backupTopics}" min="0"></div>
+      </div></div>
+      <div class="field"><label>筛选权重</label><div class="row">
+        <div><label>行业热度 <input type="number" id="f_heatWeight" value="${c.heatWeight}" min="0" max="100"></label></div>
+        <div><label>新颖程度 <input type="number" id="f_noveltyWeight" value="${c.noveltyWeight}" min="0" max="100"></label></div>
+        <div><label>决策价值 <input type="number" id="f_valueWeight" value="${c.valueWeight}" min="0" max="100"></label></div>
+      </div><div class="hint">三项合计建议为 100，作为选题打分依据。</div></div>
+      <div class="field"><label>排除词（每行一个）</label><textarea id="f_excludeWords">${esc(c.excludeWords)}</textarea></div>`;
+    case "create": return f() + `
+      <div class="field"><label>标题风格</label>
+        <select id="f_titleStyle">
+          <option value="hook" ${c.titleStyle === "hook" ? "selected" : ""}>钩子式（如：加盟圈炸了！这个品类突然火了）</option>
+          <option value="info" ${c.titleStyle === "info" ? "selected" : ""}>资讯式（如：今日加盟圈速递：3 条新动态）</option>
+          <option value="question" ${c.titleStyle === "question" ? "selected" : ""}>提问式（如：2026 加盟还能做吗？）</option>
+        </select></div>
+      <div class="field"><label>正文目标字数</label><input type="number" id="f_bodyLength" value="${c.bodyLength}" min="50" max="1000">
+        <div class="hint">小红书正文上限 1000 字，建议 200~500 字。</div></div>
+      <div class="field"><label>使用 emoji</label><label class="toggle"><input type="checkbox" id="f_useEmoji" ${c.useEmoji ? "checked" : ""}><span class="switch"></span>${c.useEmoji ? "使用" : "不用"}</label></div>
+      <div class="field"><label>话题标签（每行一个）</label><textarea id="f_tags">${esc(c.tags)}</textarea></div>`;
+    case "design": return f() + `
+      <div class="field"><div class="row">
+        <div><label>画布宽度 px</label><input type="number" id="f_width" value="${c.width}"></div>
+        <div><label>画布高度 px</label><input type="number" id="f_height" value="${c.height}"></div>
+      </div><div class="hint">3:4 比例：1080×1440。</div></div>
+      <div class="field"><label>模板文件</label>
+        <select id="f_template">
+          <option value="cover_template_dark.svg" ${c.template === "cover_template_dark.svg" ? "selected" : ""}>深蓝商务版（SVG）</option>
+          <option value="cover_template_light.svg" ${c.template === "cover_template_light.svg" ? "selected" : ""}>米白清新版（SVG）</option>
+          <option value="custom" ${c.template === "custom" ? "selected" : ""}>自定义（填写路径）</option>
+        </select>
+        <input type="text" id="f_templateCustom" placeholder="自定义模板路径" style="margin-top:8px" value="${c.template.startsWith("cover_") ? "" : c.template}"></div>
+      <div class="field"><label>主视觉来源</label>
+        <select id="f_visualMode">
+          <option value="ai" ${c.visualMode === "ai" ? "selected" : ""}>AI 生成配图（推荐）</option>
+          <option value="text" ${c.visualMode === "text" ? "selected" : ""}>纯文字排版</option>
+          <option value="upload" ${c.visualMode === "upload" ? "selected" : ""}>手动上传图片</option>
+        </select></div>
+      <div class="field"><label>自动判断图组张数</label><label class="toggle"><input type="checkbox" id="f_autoPages" ${c.autoPages ? "checked" : ""}><span class="switch"></span>${c.autoPages ? "自动" : "固定"}</label></div>
+      <div class="field"><label>最多张数</label><input type="number" id="f_maxPages" value="${c.maxPages}" min="1" max="9">
+        <div class="hint">小红书单条笔记最多 9 张图。</div></div>`;
+    case "deliver": return f() + `
+      <div class="field"><label>输出目录</label><input type="text" id="f_outputPath" value="${esc(c.outputPath)}">
+        <div class="hint">YYYY-MM-DD 会被替换为当天日期。</div></div>
+      <div class="field"><label>导出内容</label><div style="display:flex;gap:20px">
+        <label class="toggle"><input type="checkbox" id="f_exportSvg" ${c.exportSvg ? "checked" : ""}><span class="switch"></span>SVG 源文件</label>
+        <label class="toggle"><input type="checkbox" id="f_exportPng" ${c.exportPng ? "checked" : ""}><span class="switch"></span>PNG 图片</label>
+        <label class="toggle"><input type="checkbox" id="f_exportMarkdown" ${c.exportMarkdown ? "checked" : ""}><span class="switch"></span>文案文件</label>
+      </div></div>`;
+    case "review": return f() + `
+      <div class="field"><label>复盘周期</label>
+        <select id="f_period">
+          <option value="weekly" ${c.period === "weekly" ? "selected" : ""}>每周</option>
+          <option value="monthly" ${c.period === "monthly" ? "selected" : ""}>每月</option>
+        </select></div>
+      <div class="field"><label>关注指标（每行一个）</label><textarea id="f_metrics">${esc(c.metrics)}</textarea></div>
+      <div class="field"><label>自动生成复盘周报</label><label class="toggle"><input type="checkbox" id="f_autoReport" ${c.autoReport ? "checked" : ""}><span class="switch"></span>${c.autoReport ? "自动" : "手动"}</label></div>`;
+  }
+}
+
+function saveModal() {
+  if (!editing) return;
+  if (editing === "__global__") {
+    config.brand.accountName = val("f_accountName");
+    config.brand.slogan = val("f_slogan");
+    config.brand.theme = val("f_theme");
+    config.brand.primaryColor = val("f_primaryColor");
+    config.brand.logoFile = val("f_logoFile");
+    config.schedule.collectTime = val("f_collectTime");
+    config.schedule.deliverTime = val("f_deliverTime");
+  } else {
+    const c = config.stages[editing];
+    c.enabled = checked("f_enabled");
+    switch (editing) {
+      case "collect":
+        c.keywords = val("f_keywords"); c.sources = val("f_sources");
+        c.minItems = num("f_minItems"); c.maxItems = num("f_maxItems"); break;
+      case "select":
+        c.mainTopics = num("f_mainTopics"); c.backupTopics = num("f_backupTopics");
+        c.heatWeight = num("f_heatWeight"); c.noveltyWeight = num("f_noveltyWeight"); c.valueWeight = num("f_valueWeight");
+        c.excludeWords = val("f_excludeWords"); break;
+      case "create":
+        c.titleStyle = val("f_titleStyle"); c.bodyLength = num("f_bodyLength");
+        c.useEmoji = checked("f_useEmoji"); c.tags = val("f_tags"); break;
+      case "design":
+        c.width = num("f_width"); c.height = num("f_height");
+        c.template = val("f_template") === "custom" ? val("f_templateCustom") : val("f_template");
+        c.visualMode = val("f_visualMode"); c.autoPages = checked("f_autoPages"); c.maxPages = num("f_maxPages"); break;
+      case "deliver":
+        c.outputPath = val("f_outputPath"); c.exportSvg = checked("f_exportSvg");
+        c.exportPng = checked("f_exportPng"); c.exportMarkdown = checked("f_exportMarkdown"); break;
+      case "review":
+        c.period = val("f_period"); c.metrics = val("f_metrics"); c.autoReport = checked("f_autoReport"); break;
+    }
+  }
+  closeModal();
+  saveConfig();
+}
+
+function val(id) { return document.getElementById(id).value.trim(); }
+function num(id) { return parseInt(document.getElementById(id).value, 10) || 0; }
+function checked(id) { return document.getElementById(id).checked; }
+function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+
+/* ---------- 导入导出 ---------- */
+function exportConfig() {
+  const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "清清聊加盟工作流配置.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast("配置已导出");
+}
+
+function importConfig(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      config = deepMerge(structuredClone(DEFAULT_CONFIG), JSON.parse(reader.result));
+      saveConfig();
+      showToast("配置导入成功");
+    } catch (e) { showToast("导入失败：文件格式不正确"); }
+  };
+  reader.readAsText(file);
+  ev.target.value = "";
+}
+
+function resetConfig() {
+  if (!confirm("确定恢复默认配置？当前修改将被覆盖。")) return;
+  config = structuredClone(DEFAULT_CONFIG);
+  saveConfig();
+  showToast("已恢复默认配置");
+}
+
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+render();
+</script>
+</body>
+</html>

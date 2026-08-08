@@ -1,0 +1,8 @@
+node_modules/
+outputs/
+logs/
+config.json
+*.log
+push_log.txt
+.DS_Store
+Thumbs.db

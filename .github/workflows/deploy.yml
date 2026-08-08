@@ -1,0 +1,25 @@
+name: 自动部署到阿里云
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: SSH 部署到阿里云
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          password: ${{ secrets.DEPLOY_PASS }}
+          port: 22
+          script: |
+            cd /opt/qqjm
+            git pull origin main
+            npm install --omit=dev --no-audit --no-fund
+            systemctl restart qqjm

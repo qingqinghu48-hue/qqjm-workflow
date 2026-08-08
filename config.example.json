@@ -1,0 +1,17 @@
+{
+  "brand": {
+    "accountName": "清清聊加盟",
+    "slogan": "每天 10:00 · 聊聊加盟圈那点事",
+    "theme": "dark",
+    "primaryColor": "#ff8c42"
+  },
+  "schedule": {
+    "collectTime": "09:00",
+    "deliverTime": "10:00"
+  },
+  "pipeline": {
+    "template": "cover_template_dark.svg",
+    "width": 1080,
+    "height": 1440
+  }
+}

@@ -1,0 +1,80 @@
+﻿<#
+  push.ps1 —— 一键提交并推送 GitHub
+  用法：
+    .\push.ps1                 # 自动提交（信息=当前时间）并推送
+    .\push.ps1 -m "修改了封面配色"
+    .\push.ps1 -watch          # 监听模式：文件变化后自动推送
+#>
+param(
+  [string]$m = "",
+  [switch]$watch
+)
+
+$ErrorActionPreference = "Stop"
+$repo = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+# 自动定位 git（系统未安装时使用 Codex 内置版本）
+$script:gitExe = $null
+$cmd = Get-Command git -ErrorAction SilentlyContinue
+if ($cmd) { $script:gitExe = $cmd.Source }
+if (-not $script:gitExe) {
+  foreach ($p in @(
+    "C:\Program Files\Git\cmd\git.exe",
+    "C:\Program Files (x86)\Git\cmd\git.exe",
+    "C:\Users\Administrator\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe"
+  )) {
+    if (Test-Path $p) { $script:gitExe = $p; break }
+  }
+}
+if (-not $script:gitExe) {
+  Write-Host "未找到 Git。请先安装 Git for Windows：winget install Git.Git" -ForegroundColor Red
+  exit 1
+}
+$gitRoot = Split-Path -Parent (Split-Path -Parent $script:gitExe)
+$mingwBin = Join-Path $gitRoot "mingw64\bin"
+if (Test-Path $mingwBin) {
+  $env:PATH = "$mingwBin;$env:PATH"
+  $env:GIT_EXEC_PATH = $mingwBin
+}
+
+$oldEA = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+& $script:gitExe config --global --add safe.directory "$repo" 2>&1 | Out-Null
+$ErrorActionPreference = $oldEA
+
+function Invoke-Git {
+  param([Parameter(ValueFromRemainingArguments = $true)][string[]]$GitArgs)
+  & $script:gitExe -c "safe.directory=$repo" @GitArgs
+}
+
+function Push-Once([string]$msg) {
+  Set-Location $repo
+  Invoke-Git add -A
+  $diff = Invoke-Git diff --cached --stat
+  if (-not $diff) {
+    Write-Host "[push] 没有可提交的修改" -ForegroundColor DarkGray
+    return
+  }
+  if (-not $msg) { $msg = "update $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" }
+  Invoke-Git commit -m $msg 2>&1 | ForEach-Object { Write-Host $_ }
+  Invoke-Git push 2>&1 | ForEach-Object { Write-Host $_ }
+  if ($LASTEXITCODE -ne 0) { Write-Host "[push] 推送失败，请先运行 setup-and-push.ps1 检查令牌" -ForegroundColor Red; exit 1 }
+  Write-Host "[push] 已推送：$msg" -ForegroundColor Green
+}
+
+if ($watch) {
+  Write-Host "[watch] 监听中：$repo （文件变化后 30 秒自动推送，Ctrl+C 退出）" -ForegroundColor Cyan
+  $lastPush = Get-Date
+  $fsw = New-Object System.IO.FileSystemWatcher $repo
+  $fsw.IncludeSubdirectories = $true
+  $fsw.EnableRaisingEvents = $true
+  while ($true) {
+    Wait-Event -Timeout 1 | Out-Null
+    if ((Get-Date) - $lastPush -gt (New-TimeSpan -Seconds 30)) {
+      try { Push-Once } catch { Write-Host "[watch] 推送失败：$_" -ForegroundColor Yellow }
+      $lastPush = Get-Date
+    }
+  }
+} else {
+  Push-Once $m
+}
