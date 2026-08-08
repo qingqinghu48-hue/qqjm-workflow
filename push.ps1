@@ -109,7 +109,7 @@ function Push-Once([string]$msg) {
 if ($watch) {
   Write-Host "[watch] 监听中：$repo （文件变化后自动推送，Ctrl+C 退出）" -ForegroundColor Cyan
   $script:lastPush = Get-Date
-  $script:dirty = $false
+  $script:dirty = $true
   $fsw = New-Object System.IO.FileSystemWatcher $repo
   $fsw.IncludeSubdirectories = $true
   $fsw.NotifyFilter = [System.IO.NotifyFilters]::LastWrite -bor [System.IO.NotifyFilters]::FileName -bor [System.IO.NotifyFilters]::Size

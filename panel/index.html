@@ -160,6 +160,25 @@
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+  .wstep { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px;
+    background: var(--bg2); border: 1px solid var(--border); margin-top: 8px; cursor: pointer; font-size: 13.5px; }
+  .wstep:hover { border-color: var(--accent); }
+  .wstep.done { border-color: rgba(52,199,123,0.4); }
+  .wstep.failed { border-color: rgba(245,93,93,0.5); }
+  .wstep.run { border-color: var(--accent); animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(255,140,66,0.3)} 50%{box-shadow:0 0 0 6px rgba(255,140,66,0)} }
+  .wic { font-size: 16px; }
+  .wname { flex: 1; font-weight: 600; }
+  .wtime { color: var(--sub); font-size: 12px; }
+  .wbtn { color: var(--accent2); font-size: 12px; }
+  .wdetail { display: none; background: var(--bg2); border: 1px dashed var(--border); border-radius: 10px;
+    padding: 12px 14px; margin-top: 6px; font-size: 13px; line-height: 1.8; }
+  .wdetail-h { font-weight: 700; margin: 10px 0 4px; color: var(--accent2); font-size: 12.5px; }
+  .wdetail-h:first-child { margin-top: 0; }
+  .wditem { padding: 4px 0; }
+  .wjson { background: #0d1218; border-radius: 8px; padding: 10px; font-size: 11px; color: #9fb3c8;
+    overflow-x: auto; margin-top: 10px; max-height: 220px; overflow-y: auto; }
+
   footer { color: var(--sub); font-size: 12px; text-align: center; margin-top: 40px; line-height: 1.8; }
 </style>
 </head>
@@ -212,12 +231,13 @@
   <div class="section-title">五、每日运行时间线（按当前配置）</div>
   <div class="card" id="timelineCard"></div>
 
-  <div class="section-title">六、服务器运行状态</div>
+  <div class="section-title">六、运行控制台</div>
   <div class="card" id="runCard">
     <div class="summary" id="runSummary">正在连接服务器…</div>
     <div class="card-foot" style="gap:10px">
-      <button class="btn primary" onclick="runNow()">⚡ 立即出图</button>
+      <button class="btn primary" onclick="runNow()">🚀 开始今日工作流</button>
     </div>
+    <div id="stepsPanel" style="margin-top:14px"></div>
     <div id="runOutputs" style="margin-top:12px"></div>
   </div>
 
@@ -627,44 +647,124 @@ function resetConfig() {
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
 render();
 
-/* ---------- 服务器运行状态 ---------- */
+/* ---------- 运行控制台 ---------- */
+const WORKFLOW_STEPS = [
+  { id: "collect", name: "采集", ic: "🔍" },
+  { id: "select", name: "选题", ic: "🎯" },
+  { id: "create", name: "创作", ic: "✍️" },
+  { id: "design", name: "出图", ic: "🎨" },
+  { id: "deliver", name: "交付", ic: "📦" },
+];
+
 async function loadRunStatus() {
   const sum = document.getElementById("runSummary");
+  const stepsEl = document.getElementById("stepsPanel");
   const out = document.getElementById("runOutputs");
   try {
-    const res = await fetch("/api/status", { cache: "no-store" });
+    const res = await fetch("/api/run/status", { cache: "no-store" });
     if (!res.ok) throw new Error("bad");
     const st = await res.json();
-    const running = st.running
-      ? "🔄 正在出图中…"
-      : (st.lastRun && st.lastRun.at ? "✅ 上次运行完成" : "⏳ 等待定时触发（每天 " + config.schedule.deliverTime + "）");
-    sum.innerHTML = `服务器时间 <b>${st.now}</b> · 今日 <b>${st.today}</b> · ${running}`;
+    const prog = st.progress;
+    const runningNow = st.running || (prog && prog.current && !prog.finishedAt);
+    const curName = prog && prog.current ? (WORKFLOW_STEPS.find(s => s.id === prog.current) || {}).name : "启动中";
+    sum.innerHTML = runningNow
+      ? `🔄 工作流运行中…（${curName}）`
+      : (prog && prog.finishedAt
+        ? `✅ 上次工作流已完成（${prog.date}）`
+        : `⏳ 空闲 · 每天 ${config.schedule.deliverTime} 自动运行，也可点下方按钮立即开始`);
+    if (prog) {
+      stepsEl.innerHTML = WORKFLOW_STEPS.map((s) => {
+        const stp = prog.steps[s.id];
+        const status = !stp ? "wait" : stp.status;
+        const icons = { wait: "⏳", running: "🔄", done: "✅", failed: "❌" };
+        const cls = status === "done" ? "done" : status === "failed" ? "failed" : status === "running" ? "run" : "";
+        const time = stp && stp.at ? new Date(stp.at).toLocaleTimeString("zh-CN", { hour12: false }) : "--";
+        return `<div class="wstep ${cls}" onclick="toggleStepDetail('${s.id}')">
+          <span class="wic">${icons[status]}</span>
+          <span class="wname">${s.ic} ${s.name}</span>
+          <span class="wtime">${time}</span>
+          <span class="wbtn">${stp ? "详情 ▾" : ""}</span>
+        </div><div class="wdetail" id="wdetail-${s.id}"></div>`;
+      }).join("");
+    } else {
+      stepsEl.innerHTML = '<div style="font-size:13px;color:var(--sub)">还没有运行记录，点"开始今日工作流"跑一次。</div>';
+    }
     if (st.outputs && st.outputs.length) {
       out.innerHTML = '<b style="font-size:12.5px;color:var(--sub)">最近产出：</b>' +
         st.outputs.slice(0, 5).map(o =>
           `<div style="font-size:13px;margin-top:6px">📅 ${o.date} → ${o.files.join("、")}</div>`
         ).join("");
-    } else {
-      out.innerHTML = '<div style="font-size:13px;color:var(--sub);margin-top:6px">还没有产出，点上面的"立即出图"生成今天的</div>';
     }
   } catch (e) {
-    sum.innerHTML = "当前为本地预览模式。部署到服务器后，这里会显示运行状态和产物列表。";
+    sum.innerHTML = "当前为本地预览模式。部署到服务器后，这里会显示运行控制台。";
+    stepsEl.innerHTML = "";
     out.innerHTML = "";
   }
+}
+
+async function toggleStepDetail(id) {
+  const el = document.getElementById("wdetail-" + id);
+  if (el.dataset.loaded) { el.style.display = el.style.display === "block" ? "none" : "block"; return; }
+  el.dataset.loaded = "1";
+  el.style.display = "block";
+  try {
+    const st = await (await fetch("/api/run/status", { cache: "no-store" })).json();
+    const prog = st.progress;
+    const stp = prog && prog.steps[id];
+    if (!stp || !stp.output) { el.innerHTML = "<div style='font-size:13px;color:var(--sub)'>该步骤还没有产出</div>"; return; }
+    const out = await (await fetch(`/outputs/${prog.date}/${stp.output}`, { cache: "no-store" })).json();
+    el.innerHTML = renderStepDetail(id, prog, out);
+  } catch (e) {
+    el.innerHTML = "<div style='font-size:13px;color:var(--sub)'>详情加载失败</div>";
+  }
+}
+
+function renderStepDetail(id, prog, out) {
+  const lines = [];
+  if (id === "collect") {
+    lines.push(`<div class="wdetail-h">素材清单（${out.count} 条）</div>`);
+    out.items.forEach((it) => lines.push(
+      `<div class="wditem">📌 <b>${esc(it.title)}</b><div style="color:var(--sub);font-size:12.5px">来源：${esc(it.source)} · ${esc(it.time)} · ${esc(it.summary)}</div></div>`
+    ));
+  } else if (id === "select") {
+    lines.push("<div class='wdetail-h'>主选题</div>");
+    lines.push(`<div class="wditem">🎯 <b>${esc(out.main.title)}</b><div style="color:var(--sub);font-size:12.5px">角度：${esc(out.main.angle)}<br>理由：${esc(out.main.reason)}</div></div>`);
+    lines.push("<div class='wdetail-h'>备选</div>");
+    out.backups.forEach((b) => lines.push(
+      `<div class="wditem">📎 ${esc(b.title)}<div style="color:var(--sub);font-size:12.5px">${esc(b.reason)}</div></div>`
+    ));
+  } else if (id === "create") {
+    lines.push(`<div class="wdetail-h">标题</div><div class="wditem">📝 ${esc(out.title)}</div>`);
+    lines.push("<div class='wdetail-h'>正文</div><div class='wditem' style='white-space:pre-wrap'>" + esc(out.body) + "</div>");
+    lines.push("<div class='wdetail-h'>图组文案</div>");
+    out.pages.forEach((p) => lines.push(`<div class="wditem">🖼 ${esc(p.page)}：${esc(p.copy)}</div>`));
+  } else if (id === "design") {
+    const png = out.images.find((f) => f.endsWith(".png"));
+    lines.push(`<div class="wdetail-h">生成图片（${out.images.filter(f => f.endsWith(".png")).length} 张）</div>`);
+    if (png) lines.push(`<img src="/outputs/${prog.date}/${png}" style="width:220px;border-radius:10px;margin-top:8px" alt="封面预览">`);
+    lines.push(`<div class="wditem" style="font-size:12.5px;color:var(--sub)">模板：${esc(out.template)} · ${out.width}×${out.height}</div>`);
+  } else if (id === "deliver") {
+    lines.push("<div class='wdetail-h'>交付清单</div>");
+    out.files.forEach((f) => lines.push(`<div class="wditem">📦 ${esc(f)}</div>`));
+    lines.push(`<div class="wditem" style="font-size:12.5px;color:var(--sub)">${esc(out.note)}</div>`);
+  }
+  lines.push(`<pre class="wjson">${esc(JSON.stringify(out, null, 2))}</pre>`);
+  return lines.join("");
 }
 
 async function runNow() {
   try {
     const res = await fetch("/api/run", { method: "POST" });
     if (!res.ok) throw new Error("bad");
-    alert("已触发出图，正在生成今天的海报…约 10 秒后刷新页面查看结果");
-    setTimeout(loadRunStatus, 5000);
+    alert("已开始今日工作流：采集 → 选题 → 创作 → 出图 → 交付\n页面会实时刷新进度");
+    loadRunStatus();
   } catch (e) {
     alert("当前是本地预览模式，无法触发。请在部署后的服务器网站上操作。");
   }
 }
 
 loadRunStatus();
+setInterval(loadRunStatus, 3000);
 </script>
 </body>
 </html>

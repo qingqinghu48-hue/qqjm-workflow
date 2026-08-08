@@ -71,8 +71,8 @@ function listOutputs() {
     .sort((a, b) => b.date.localeCompare(a.date));
 }
 
-function runPipeline(cb) {
-  const script = path.join(PIPELINE_DIR, "run_pipeline.js");
+function runWorkflow(cb) {
+  const script = path.join(PIPELINE_DIR, "run_workflow.js");
   const child = spawn(process.execPath, [script], {
     cwd: PIPELINE_DIR,
     stdio: ["ignore", "pipe", "pipe"],
@@ -87,6 +87,20 @@ function runPipeline(cb) {
 let lastRun = { at: null, code: null, log: "" };
 let running = false;
 
+function latestProgress() {
+  if (!fs.existsSync(OUTPUT_DIR)) return null;
+  const days = fs.readdirSync(OUTPUT_DIR)
+    .filter((d) => fs.existsSync(path.join(OUTPUT_DIR, d, "progress.json")))
+    .sort();
+  if (!days.length) return null;
+  const last = days[days.length - 1];
+  try {
+    return JSON.parse(fs.readFileSync(path.join(OUTPUT_DIR, last, "progress.json"), "utf-8"));
+  } catch (e) {
+    return null;
+  }
+}
+
 function maybeSchedule() {
   const cfg = loadConfig();
   const now = timeNow();
@@ -96,7 +110,7 @@ function maybeSchedule() {
   if (running) return;
   running = true;
   lastRun.at = new Date().toISOString();
-  runPipeline((code, log) => {
+  runWorkflow((code, log) => {
     running = false;
     lastRun.code = code;
     lastRun.log = log.slice(-2000);
@@ -190,18 +204,27 @@ const server = http.createServer((req, res) => {
   if (p === "/api/run" && req.method === "POST") {
     if (running) {
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify({ ok: true, running: true }));
+      res.end(JSON.stringify({ ok: true, running: true, progress: latestProgress() }));
       return;
     }
     running = true;
     lastRun.at = new Date().toISOString();
-    runPipeline((code, log) => {
+    runWorkflow((code, log) => {
       running = false;
       lastRun.code = code;
       lastRun.log = log.slice(-2000);
     });
     res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-    res.end(JSON.stringify({ ok: true, running: true }));
+    res.end(JSON.stringify({ ok: true, running: true, progress: latestProgress() }));
+    return;
+  }
+  if (p === "/api/run/status" && req.method === "GET") {
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({
+      running,
+      progress: latestProgress(),
+      lastRun,
+    }));
     return;
   }
   if (p === "/api/status" && req.method === "GET") {
