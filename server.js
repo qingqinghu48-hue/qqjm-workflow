@@ -10,6 +10,8 @@ const PANEL_DIR = path.join(APP_DIR, "panel");
 const PIPELINE_DIR = path.join(APP_DIR, "pipeline");
 const OUTPUT_DIR = path.join(APP_DIR, "outputs");
 const CONFIG_FILE = path.join(APP_DIR, "config.json");
+const CONTENT_FILE = path.join(APP_DIR, "pipeline", "content.json");
+const CONTENT_EXAMPLE = path.join(APP_DIR, "pipeline", "content.example.json");
 const PORT = process.env.PORT || 8080;
 
 const DEFAULT_CONFIG = {
@@ -46,6 +48,19 @@ function loadConfig() {
 
 function saveConfig(cfg) {
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2), "utf-8");
+}
+
+function loadContent() {
+  try {
+    const src = fs.existsSync(CONTENT_FILE) ? CONTENT_FILE : CONTENT_EXAMPLE;
+    return { src, data: JSON.parse(fs.readFileSync(src, "utf-8")) };
+  } catch (e) {
+    return { src: null, data: {} };
+  }
+}
+
+function saveContent(data) {
+  fs.writeFileSync(CONTENT_FILE, JSON.stringify(data, null, 2), "utf-8");
 }
 
 function today() {
@@ -189,6 +204,25 @@ const server = http.createServer((req, res) => {
         saveConfig(cfg);
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ ok: true, config: loadConfig() }));
+      } catch (e) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ ok: false, error: "JSON 格式错误" }));
+      }
+    });
+    return;
+  }
+  if (p === "/api/content" && req.method === "GET") {
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify(loadContent().data));
+    return;
+  }
+  if (p === "/api/content" && req.method === "POST") {
+    readBody(req, (body) => {
+      try {
+        const data = JSON.parse(body);
+        saveContent(data);
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ ok: true }));
       } catch (e) {
         res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ ok: false, error: "JSON 格式错误" }));

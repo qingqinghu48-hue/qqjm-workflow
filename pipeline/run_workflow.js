@@ -87,7 +87,7 @@ function fail(name, e) {
 }
 
 // ---------- 01 采集 ----------
-function stepCollect() {
+function stepCollect(content) {
   begin("collect");
   const sample = [
     { title: "某头部茶饮品牌宣布开放区域加盟，首批 200 个名额", source: "红餐网", time: "08:40", url: "#", summary: "品牌方表示将优先选择有餐饮经验的创业者，加盟门槛约 30 万起。" },
@@ -95,56 +95,79 @@ function stepCollect() {
     { title: "烘焙加盟赛道观察：三四线县城店坪效逆势上涨", source: "联商网", time: "07:55", url: "#", summary: "多家烘焙品牌下沉县城后，凭借低房租与刚需属性实现盈利模型跑通。" },
     { title: "市场监管总局提示：警惕'0元加盟'类骗局，注意核实资质", source: "官方发布", time: "07:20", url: "#", summary: "以'0加盟费'为噱头的项目需重点核查特许经营备案与合同条款。" },
   ];
+  const edited = content.collect && content.collect.items && content.collect.items.length;
+  const items = edited ? content.collect.items : sample;
   const payload = {
-    note: "示例素材（正式接入采集数据源后自动更新）",
-    keywords: ["加盟", "连锁加盟", "招商加盟"],
-    items: sample,
-    count: sample.length,
+    note: edited ? "素材来源：你在「采集」页面编辑的内容" : "示例素材（到「采集」页面编辑关键词与素材）",
+    keywords: (content.collect && content.collect.keywords) || ["加盟", "连锁加盟", "招商加盟"],
+    items,
+    count: items.length,
   };
   end("collect", payload);
   return payload;
 }
 
 // ---------- 02 选题 ----------
-function stepSelect(collect) {
+function stepSelect(content, collect) {
   begin("select");
-  const payload = {
-    main: {
-      title: collect.items[0].title,
-      angle: "从加盟政策与品牌动向看今日加盟圈两大信号",
-      reason: "头部品牌开放加盟 + 官方流程优化，是加盟人群最关心的两类信息，决策价值高。",
-    },
-    backups: [
-      { title: collect.items[2].title, reason: "烘焙下沉趋势属于高关注度赛道话题，易引发讨论。" },
-      { title: collect.items[3].title, reason: "避坑内容天然高收藏，适合作为备选。" },
-    ],
-  };
+  const payload = (content.select && content.select.main)
+    ? {
+        main: content.select.main,
+        backups: content.select.backups || [],
+        note: "内容来源：你在「选题」页面编辑的内容",
+      }
+    : {
+        main: {
+          title: collect.items[0].title,
+          angle: "从加盟政策与品牌动向看今日加盟圈两大信号",
+          reason: "头部品牌开放加盟 + 官方流程优化，是加盟人群最关心的两类信息，决策价值高。",
+        },
+        backups: [
+          { title: collect.items[2].title, reason: "烘焙下沉趋势属于高关注度赛道话题，易引发讨论。" },
+          { title: collect.items[3].title, reason: "避坑内容天然高收藏，适合作为备选。" },
+        ],
+        note: "自动选题（可在「选题」页面调整）",
+      };
   end("select", payload);
   return payload;
 }
 
 // ---------- 03 创作 ----------
-function stepCreate(content, select, collect) {
+function stepCreate(content, collect) {
   begin("create");
-  const items = (content.items && content.items.length === 3)
-    ? content.items
-    : collect.items.slice(0, 3).map((it, i) => ({ head: ["今日重磅", "行业动态", "避坑提醒"][i], body: it.title }));
-  const title = `${content.title1}｜${content.title2}`;
-  const body = `${content.title1}，${content.title2}。\n\n今天加盟圈有这些值得关注👇\n\n` +
-    items.map((it, i) => `${"①②③"[i]} ${it.head}：${it.body}`).join("\n\n") +
-    `\n\n你觉得哪条信息最有用？评论区聊聊～\n\n${content.tags || "#加盟 #连锁加盟 #创业日记"}`;
-  const payload = {
-    title,
-    subtitle: content.subtitle,
-    body,
-    emoji: true,
-    tags: content.tags || "#加盟 #连锁加盟 #创业日记",
-    pages: [
-      { page: "01_封面", copy: title },
-      ...items.map((it, i) => ({ page: `0${i + 2}_${it.head}`, copy: `${it.head}：${it.body}` })),
-    ],
-  };
-  fs.writeFileSync(path.join(dayDir, "文案.md"), `# ${title}\n\n${body}\n`, "utf-8");
+  let payload;
+  if (content.create && content.create.title && content.create.body) {
+    payload = {
+      title: content.create.title,
+      subtitle: content.subtitle,
+      body: content.create.body,
+      emoji: true,
+      tags: content.tags || "#加盟 #连锁加盟 #创业日记",
+      pages: content.create.pages || [],
+      note: "内容来源：你在「创作」页面编辑的内容",
+    };
+  } else {
+    const items = (content.items && content.items.length === 3)
+      ? content.items
+      : collect.items.slice(0, 3).map((it, i) => ({ head: ["今日重磅", "行业动态", "避坑提醒"][i], body: it.title }));
+    const title = `${content.title1}｜${content.title2}`;
+    const body = `${content.title1}，${content.title2}。\n\n今天加盟圈有这些值得关注👇\n\n` +
+      items.map((it, i) => `${"①②③"[i]} ${it.head}：${it.body}`).join("\n\n") +
+      `\n\n你觉得哪条信息最有用？评论区聊聊～\n\n${content.tags || "#加盟 #连锁加盟 #创业日记"}`;
+    payload = {
+      title,
+      subtitle: content.subtitle,
+      body,
+      emoji: true,
+      tags: content.tags || "#加盟 #连锁加盟 #创业日记",
+      pages: [
+        { page: "01_封面", copy: title },
+        ...items.map((it, i) => ({ page: `0${i + 2}_${it.head}`, copy: `${it.head}：${it.body}` })),
+      ],
+      note: "自动创作（可在「创作」页面调整）",
+    };
+  }
+  fs.writeFileSync(path.join(dayDir, "文案.md"), `# ${payload.title}\n\n${payload.body}\n`, "utf-8");
   end("create", payload);
   return payload;
 }
@@ -221,9 +244,9 @@ async function main() {
   initDirs();
   saveProgress();
   const content = loadContent().raw;
-  const collect = stepCollect();
-  const select = stepSelect(collect);
-  const create = stepCreate(content, select, collect);
+  const collect = stepCollect(content);
+  const select = stepSelect(content, collect);
+  const create = stepCreate(content, collect);
   await stepDesign(content);
   const deliver = stepDeliver(create);
   progress.current = null;
